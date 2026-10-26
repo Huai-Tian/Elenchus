@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "probes.h"
+#include "auto.h"
 
 static void Help(void)
 {
@@ -42,10 +43,11 @@ static void Help(void)
 
 int main(int argc, char** argv)
 {
+    // ── 全自动模式: 无参数直接回车 ──
+    // 检测环境(bare/vm/fw) → 按形态跑完整清单 → 自动命名/轮次/汇总
     if (argc < 2)
     {
-        Help();
-        return 2;
+        return RunAuto();
     }
     const char* sub = argv[1];
     if (!strcmp(sub, "cpuid"))       return RunCpuidDump(argc - 1, argv + 1);

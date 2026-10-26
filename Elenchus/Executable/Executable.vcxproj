@@ -62,6 +62,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <Optimization>MaxSpeed</Optimization>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -72,6 +74,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="elenchus.c" />
+    <ClCompile Include="auto.c" />
     <ClCompile Include="cpuid_dump.c" />
     <ClCompile Include="dwell.c" />
     <ClCompile Include="clkprobe.c" />
@@ -83,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="probes.h" />
+    <ClInclude Include="auto.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
