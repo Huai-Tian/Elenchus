@@ -19,7 +19,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="Elenchus.inf">
+    <Inf Include="Driver.inf">
       <Filter>Driver Files</Filter>
     </Inf>
   </ItemGroup>
