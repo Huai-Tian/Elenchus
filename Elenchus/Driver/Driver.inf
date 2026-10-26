@@ -19,11 +19,6 @@ DefaultDestDir = 13
 
 [SourceDisksFiles]
 
-[Manufacturer]
-%ManufacturerName%=Standard,NT$ARCH$.10.0...16299 ; %13% support introduced in build 16299
-
-[Standard.NT$ARCH$.10.0...16299]
-
 [Strings]
 ManufacturerName="<Your manufacturer name>" ;TODO: Replace with your manufacturer name
 DiskName="Driver Source Disk"
