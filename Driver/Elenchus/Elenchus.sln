@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37628.2 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elenchus", "Elenchus.vcxproj", "{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Debug|ARM64.Build.0 = Debug|ARM64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Debug|x64.ActiveCfg = Debug|x64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Debug|x64.Build.0 = Debug|x64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Debug|x64.Deploy.0 = Debug|x64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Release|ARM64.ActiveCfg = Release|ARM64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Release|ARM64.Build.0 = Release|ARM64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Release|ARM64.Deploy.0 = Release|ARM64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Release|x64.ActiveCfg = Release|x64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Release|x64.Build.0 = Release|x64
+		{E6841BDA-FF15-F4D9-06F9-0A1C913D60F4}.Release|x64.Deploy.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C1D0751B-35F3-44C5-A8E9-19C522943EC3}
+	EndGlobalSection
+EndGlobal

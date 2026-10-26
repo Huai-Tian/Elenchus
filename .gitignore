@@ -1,0 +1,53 @@
+# ===== Build outputs =====
+Debug/
+Release/
+Win32/
+x64/
+ARM64/
+ipch/
+*.log
+*.tlog
+*.pdb
+*.ilk
+*.obj
+*.lib
+*.exp
+*.cer
+*.cat
+*.crc
+*.difflib
+
+# ===== VS =====
+.vs/
+*.suo
+*.user
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.vcxproj.user
+
+# ===== GnptHooks additions (继承GeptHooks判例) =====
+# Crash dumps: huge + contain FULL physical memory — never commit
+*.dmp
+*.DMP
+# Built driver binaries (catches copies outside Debug/Release dirs)
+*.sys
+# Framework runtime log + parser report (contain machine info)
+gnpt_log*.txt
+gnpt_bb*.txt
+
+# ===== Reference repos (本地参考, 不进仓库) =====
+refs/
+
+# ===== 个人工具与本地手册 (APM手册24MB+中转站脚本, 不进仓库) =====
+tools/
+
+# ===== 私有文档 (判例库/会话交接, 与GeptHooks仓库形态对齐不公开) =====
+NOTES.md
+HANDOFF.md
+
+# ===== OS =====
+Thumbs.db
+.DS_Store
