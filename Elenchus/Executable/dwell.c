@@ -5,7 +5,7 @@
 //       delta 分布 = 该指令的执行开销。裸机 ~数百 cycles；
 //       未补偿 hypervisor 下 delta 显著抬升（exit+entry 驻留）。
 //
-// 用法: dwell.exe [-n N] [-c CPU] [-i cpuid|sgdt] [-o out.csv] [-w]
+// 
 //   -n N      样本数（默认 1000000）
 //   -c CPU    钉核（默认 0）
 //   -i instr  探测指令（默认 cpuid；sgdt=经典 red pill 描述符表读）
@@ -39,7 +39,7 @@ static int CmpU64(const void* a, const void* b)
     return (x > y) - (x < y);
 }
 
-int main(int argc, char** argv)
+int RunDwell(int argc, char** argv)
 {
     long long n = 1000000;
     int cpu = 0, window = 0;
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
     // 输出 mismatch 计数(裸机/框架预期=0)。
     if (useAux)
     {
-        unsigned long long aux1 = 0, aux2 = 0;
+        unsigned int aux1 = 0, aux2 = 0;
         long long mismatch = 0;
         unsigned long long seen = 0;
         for (long long i = 0; i < n; i++)
@@ -113,7 +113,6 @@ int main(int argc, char** argv)
     }
 
     int regs[4];
-    unsigned long long aux;
     long long done = 0;
 
     // 预热（缓存/分支训练）

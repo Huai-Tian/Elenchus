@@ -7,7 +7,7 @@
 //       时间抬升。零 exit 的 hook 路径不产生扰动 = 本设计的正面证据;
 //       时钟读路径(每次 exit)是否扰动 = 直接检验"封堵的代价转移"。
 //
-// 用法: tlbperturb.exe [-p 页数(默认1024)] [-r 重复(默认50)] [-c CPU]
+// 
 //                      [-t cpuid|clock|none]
 //   -t cpuid  触发=CPUID(经典被拦截指令)
 //   -t clock  触发=读 HPET(经 hptmap 驱动——时钟封堵路径的 exit)
@@ -20,9 +20,12 @@
 // =====================================================================
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <intrin.h>
+
+#define PAGE_SIZE 4096   // 用户态无 ntddk 的 PAGE_SIZE
 
 #define ELENCHUS_DEV "\\\\.\\Elenchus"
 #define ELEN_IOCTL_HPTMAP_MAP    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
@@ -36,7 +39,7 @@ static int CmpDouble(const void* x, const void* y)
     return (a > b) - (a < b);
 }
 
-int main(int argc, char** argv)
+int RunTlb(int argc, char** argv)
 {
     int pages = 1024, reps = 50, cpu = 0;
     const char* trig = "cpuid";
@@ -86,7 +89,7 @@ int main(int argc, char** argv)
 
     ROW* rows = (ROW*)malloc(reps * sizeof(*rows));
     int regs[4];
-    unsigned long long aux;
+    unsigned int aux;
     LONG sink = 0;
 
     // 预热

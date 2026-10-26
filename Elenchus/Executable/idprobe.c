@@ -1,7 +1,7 @@
 ﻿// =====================================================================
 // idprobe.c — B 族 R3 前端: CPUID dump + MSR 面 + 指令面 一键采集
 //
-// 用法(管理员): idprobe.exe [-o 前缀] [-m msr,msr,...] [-c CPU]
+// 用法(管理员): Executable.exe id [-o 前缀] [-m msr,msr,...] [-c CPU]
 //   产物: <前缀>_cpuid.csv + 控制台 MSR/指令面表
 //   -m 自定义 MSR 列表(hex, 逗号分隔)
 //   默认 MSR 列表: 0x3A(特征控制,框架伪造点) 0xFE(MTRRcap)
@@ -13,6 +13,7 @@
 // =====================================================================
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <intrin.h>
@@ -35,7 +36,7 @@ static const char* ExcName(ULONG c)
     }
 }
 
-int main(int argc, char** argv)
+int RunId(int argc, char** argv)
 {
     const char* prefix = "idprobe";
     const char* extraMsrs = NULL;
@@ -139,7 +140,7 @@ int main(int argc, char** argv)
     printf("\n[MSR 面] (三形态对照: 同表裸机/VMware/框架各跑一次)\n");
     printf("%-12s %-14s %-18s %s\n", "MSR", "结果", "值", "异常");
     DWORD br;
-    for (int i = 0; i < nMsrs; i++)
+    for (int i = 0; i < (int)nMsrs; i++)
     {
         ULONG32 in = msrs[i];
         MSR_OUT out = { 0 };

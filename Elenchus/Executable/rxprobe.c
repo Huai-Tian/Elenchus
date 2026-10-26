@@ -1,7 +1,7 @@
 ﻿// =====================================================================
 // rxprobe.c — C2 读-执行差分探测器 R3 前端
 //
-// 用法(管理员): rxprobe.exe [选项]
+// 用法(管理员): Executable.exe rx [选项]
 //   -t VA      目标内核地址(默认 0 = 驱动自解析 NtClose)
 //   -l LEN     比对长度(默认 32, <=64)
 //   -e N       执行次数(默认 1)
@@ -13,6 +13,7 @@
 // =====================================================================
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -58,7 +59,7 @@ static int MemEq(const unsigned char* a, const unsigned char* b, ULONG len)
     return 1;
 }
 
-int main(int argc, char** argv)
+int RunRx(int argc, char** argv)
 {
     unsigned long long target = 0;
     unsigned long len = 32;

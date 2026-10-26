@@ -11,7 +11,7 @@
 // 判读: 裸机 = 四项全 PASS。框架下被吞/丢失 = 调试面指纹。
 //       GnptHooks DR租用制下 guest 的写入应忠实生效（影子一致）。
 //
-// 用法: dbgface.exe [-n 100]
+// 
 // 编译: cl /O2 dbgface.c
 // =====================================================================
 #define WIN32_LEAN_AND_MEAN
@@ -63,7 +63,17 @@ static LONG WINAPI VehHandler(PEXCEPTION_POINTERS ep)
 
 typedef void (*STUB_FN)(void);
 
-int main(int argc, char** argv)
+// DR 测试工作线程(C 兼容: 无 lambda): 就绪后自旋等待停止
+typedef struct { HANDLE ready; volatile LONG* stop; } WORKER_ARG;
+static DWORD WINAPI DrWorker(LPVOID p)
+{
+    WORKER_ARG* a = (WORKER_ARG*)p;
+    SetEvent(a->ready);
+    while (!*a->stop) { Sleep(1); }
+    return 0;
+}
+
+int RunDbg(int argc, char** argv)
 {
     int n = 100;
     for (int i = 1; i < argc; i++)
@@ -101,18 +111,11 @@ int main(int argc, char** argv)
         g_delivered == n ? "PASS" : (g_delivered == 0 ? "FAIL(单步被吞)" : "PARTIAL"));
 
     // 4. DR0/DR7 写读一致性（挂起-写-读回）
-    typedef struct { HANDLE ready; volatile LONG* stop; } WORKER_ARG;
     printf("DR 写读一致性:   ");
     static volatile LONG g_stop = 0;
     HANDLE hReady = CreateEventA(NULL, FALSE, FALSE, NULL);
     WORKER_ARG wa = { hReady, &g_stop };
-    HANDLE hThread = CreateThread(NULL, 0, [](LPVOID p) -> DWORD
-    {
-        WORKER_ARG* a = (WORKER_ARG*)p;
-        SetEvent(a->ready);
-        while (!*a->stop) { Sleep(1); }
-        return 0;
-    }, &wa, 0, NULL);
+    HANDLE hThread = CreateThread(NULL, 0, DrWorker, &wa, 0, NULL);
     WaitForSingleObject(hReady, INFINITE);
     Sleep(50);
 

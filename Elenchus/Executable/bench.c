@@ -2,20 +2,21 @@
 // bench.c — PERF R3 前端: 端到端每跳开销 / syscall 洪泛 / 上下文切换 / kbench
 //
 // 模式:
-//   bench.exe hits  [-n N] [-o raw.csv]   每次调用 rdtscp 夹逼 CloseHandle
+//   Executable.exe bench hits  [-n N] [-o raw.csv]   每次调用 rdtscp 夹逼 CloseHandle
 //                                             (NtClose 框架钩子的端到端开销)
-//   bench.exe batch [-n N]                批量夹逼(1000次/批) 低噪声均值
-//   bench.exe flood [-n N]                10^7 次 syscall 吞吐(wall clock)
-//   bench.exe ctxsw [-n N]                双线程事件乒乓 = 上下文切换成本
-//   bench.exe k     [-n N] [--inline]     经 kbench 驱动内核侧精确每跳
+//   Executable.exe bench batch [-n N]                批量夹逼(1000次/批) 低噪声均值
+//   Executable.exe bench flood [-n N]                10^7 次 syscall 吞吐(wall clock)
+//   Executable.exe bench ctxsw [-n N]                双线程事件乒乓 = 上下文切换成本
+//   Executable.exe bench k     [-n N] [--inline]     经 kbench 驱动内核侧精确每跳
 //                                             --inline = 自产 inline 基线
-//   bench.exe kaddr                      打印 kbench 靶 VA(框架 demo 挂钩用)
+//   Executable.exe bench kaddr                      打印 kbench 靶 VA(框架 demo 挂钩用)
 //
 // 全部输出 CSV + 控制台摘要; 三形态(裸/对照/框架)各跑一遍对照
 // 编译: cl /O2 bench.c
 // =====================================================================
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <intrin.h>
@@ -56,7 +57,20 @@ static HANDLE OpenKbench(void)
     return h;
 }
 
-int main(int argc, char** argv)
+// ctxsw 工作线程(双线程事件乒乓, C 兼容: 无 lambda)
+typedef struct { HANDLE mine, theirs; long long n; } CTX_ARG;
+static DWORD WINAPI CtxWorker(LPVOID p)
+{
+    CTX_ARG* a = (CTX_ARG*)p;
+    for (long long i = 0; i < a->n; i++)
+    {
+        SetEvent(a->theirs);
+        WaitForSingleObject(a->mine, INFINITE);
+    }
+    return 0;
+}
+
+int RunBench(int argc, char** argv)
 {
     if (argc < 2) { fprintf(stderr, "用法见文件头注释\n"); return 2; }
     const char* mode = argv[1];
@@ -76,7 +90,7 @@ int main(int argc, char** argv)
     {
         // 预热
         for (int i = 0; i < 10000; i++) CloseHandle((HANDLE)-1);
-        unsigned long long aux;
+        unsigned int aux;
         if (mode[0] == 'h')
         {
             unsigned long long* d = (unsigned long long*)malloc((size_t)n * sizeof(*d));
@@ -127,21 +141,9 @@ int main(int argc, char** argv)
         // 双线程事件乒乓: 每迭代 = 2次 SetEvent + 2次等待 ≈ 2 次上下文切换
         HANDLE eA = CreateEventA(NULL, FALSE, FALSE, NULL);
         HANDLE eB = CreateEventA(NULL, FALSE, FALSE, NULL);
-        volatile long long* shared = (volatile long long*)malloc(sizeof(long long));
-        *shared = 0;
-        typedef struct { HANDLE mine, theirs; volatile long long* ctr; long long n; } CTX_ARG;
-        static CTX_ARG arg;
-        arg.mine = eA; arg.theirs = eB; arg.ctr = shared; arg.n = n;
-        HANDLE th = CreateThread(NULL, 0, [](LPVOID p) -> DWORD
-        {
-            CTX_ARG* a = (CTX_ARG*)p;
-            for (long long i = 0; i < a->n; i++)
-            {
-                SetEvent(a->theirs);
-                WaitForSingleObject(a->mine, INFINITE);
-            }
-            return 0;
-        }, &arg, 0, NULL);
+        CTX_ARG arg;
+        arg.mine = eA; arg.theirs = eB; arg.n = n;
+        HANDLE th = CreateThread(NULL, 0, CtxWorker, &arg, 0, NULL);
         LARGE_INTEGER f, t0, t1;
         QueryPerformanceFrequency(&f);
         SetThreadPriority(th, THREAD_PRIORITY_TIME_CRITICAL);
@@ -157,7 +159,7 @@ int main(int argc, char** argv)
         double sec = (double)(t1.QuadPart - t0.QuadPart) / f.QuadPart;
         printf("ctxsw: %lld 迭代(2切换/迭代) %.3fs → %.0f ns/切换\n",
             n, sec, sec * 1e9 / (n * 2));
-        CloseHandle(th); CloseHandle(eA); CloseHandle(eB); free((void*)shared);
+        CloseHandle(th); CloseHandle(eA); CloseHandle(eB);
     }
     else if (!strcmp(mode, "k"))
     {

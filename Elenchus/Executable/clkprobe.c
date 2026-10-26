@@ -7,7 +7,7 @@
 //         未补偿 hypervisor → 残差 = exit 驻留(宽/双峰/台阶)
 //         被测框架        → 期望与裸机同形(时间轴封堵成功)
 //
-// 用法: clkprobe.exe [选项]
+// 
 //   -h        HPET 轴 (默认, 经 hptmap 驱动读 0xFED00000+0xF0)
 //   -p        PM_TMR 轴 (从 ACPI FADT 解析基址, 经 hptmap 驱动)
 //   -q        QPC 轴    (纯 R3, 无需驱动; 注意 QPC 可能即 TSC 源)
@@ -22,6 +22,7 @@
 // =====================================================================
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <intrin.h>
@@ -101,7 +102,7 @@ static inline ULONG64 SerRdtsc(void)
     return __rdtsc();
 }
 
-int main(int argc, char** argv)
+int RunClk(int argc, char** argv)
 {
     enum { AX_HPET, AX_PMTMR, AX_QPC } axis = AX_HPET;
     long long nSamples = 100000;

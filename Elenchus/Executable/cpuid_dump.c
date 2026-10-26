@@ -2,7 +2,7 @@
 // cpuid_dump.c — CPUID 全叶 dump（S0 基线 / B1 向量）
 //
 // 输出 CSV: leaf,subleaf,eax,ebx,ecx,edx (hex)
-// 用法: cpuid_dump.exe [-o out.csv]   (默认 stdout)
+// 
 // 编译: cl /O2 cpuid_dump.c
 // 对比: python3 diff_cpuid.py base.csv target.csv
 // =====================================================================
@@ -40,7 +40,7 @@ static void DumpRange(unsigned beg, unsigned end, FILE* out)
     }
 }
 
-int main(int argc, char** argv)
+int RunCpuidDump(int argc, char** argv)
 {
     FILE* out = stdout;
     for (int i = 1; i < argc; i++)
