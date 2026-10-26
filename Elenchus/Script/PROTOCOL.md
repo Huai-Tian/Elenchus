@@ -2,7 +2,7 @@
 
 论文实验全套采集器。所有产物 CSV/控制台输出直接回填论文表格。
 
-**结构**：`Elenchus/Driver`（统一驱动 Driver.sys）/ `Elenchus/Executable`（R3 程序）/ `Elenchus/Script`（脚本与协议）。
+**结构**：`Elenchus/Driver`（统一驱动 Driver.sys）/ `Elenchus/Executable`（统一程序 Executable.exe，八个子命令）/ `Elenchus/Script`（脚本与协议）。
 
 **驱动一次装载，全部探测可用**：
 
@@ -18,7 +18,7 @@ sc delete elenchus
 
 - **驱动**：VS2022 + WDK 打开 `Elenchus\Driver\Driver.sln`，Release/x64 构建
   （源：main.c 分发路由 + mod_hptmap/mod_rxdiff/mod_kbench/mod_idface + idface.asm/kbench.asm）
-- **R3**：`cd Executable` 后逐个 `cl /O2 文件名.c`
+- **R3**：VS 打开 `Elenchus\Executable\Executable.sln` 生成（产出单个 Executable.exe，八个子命令：cpuid/dwell/clk/tlb/rx/id/dbg/bench）
 - **脚本**：Python 3 纯标准库；snapshot.ps1 需管理员 PowerShell
 
 ## v3 变更摘要（时事核查驱动）
@@ -45,12 +45,12 @@ sc delete elenchus
 
 ```powershell
 cd Executable
-cpuid_dump.exe -o bare_cpuid.csv
-dwell.exe -n 1000000 -c 0 -i cpuid -o bare_dwell_c0.csv
-dwell.exe -n 1000000 -c 0 -i sgdt  -o bare_sgdt_c0.csv
-dwell.exe -n 1000000 -c 0 -i rdtscaux                 # PASS/FAIL
-tlbperturb.exe -t none  -c 0                            # 噪声底
-tlbperturb.exe -t cpuid -c 0                            # 裸机形态
+Executable.exe cpuid -o bare_cpuid.csv
+Executable.exe dwell -n 1000000 -c 0 -i cpuid -o bare_dwell_c0.csv
+Executable.exe dwell -n 1000000 -c 0 -i sgdt  -o bare_sgdt_c0.csv
+Executable.exe dwell -n 1000000 -c 0 -i rdtscaux                 # PASS/FAIL
+Executable.exe tlb -t none  -c 0                            # 噪声底
+Executable.exe tlb -t cpuid -c 0                            # 裸机形态
 # 多核抽样: -c 1/2/... 至少 4 核
 # 管理员 PowerShell: cd Elenchus\Script; .\snapshot.ps1 -Tag bare
 ```
@@ -59,21 +59,21 @@ tlbperturb.exe -t cpuid -c 0                            # 裸机形态
 
 ```powershell
 # 正对照: 本机 VMware guest 内跑同一探测器
-clkprobe.exe -h -n 1000000 -c 0 -o vm_hpet.csv
-clkprobe.exe -p -n 1000000 -c 0 -o vm_pmtmr.csv
-clkprobe.exe -q -n 1000000 -c 0 -o vm_qpc.csv
+Executable.exe clk -h -n 1000000 -c 0 -o vm_hpet.csv
+Executable.exe clk -p -n 1000000 -c 0 -o vm_pmtmr.csv
+Executable.exe clk -q -n 1000000 -c 0 -o vm_qpc.csv
 
 # 目标形态: 装框架(Debug 构建) + elenchus 驱动
 sc start elenchus
 sc start GeptHooks        # Intel 机; AMD 机 = gnpt
-clkprobe.exe -h -n 1000000 -c 0 -o fw_hpet.csv
-clkprobe.exe -p -n 1000000 -c 0 -o fw_pmtmr.csv
-clkprobe.exe -q -n 1000000 -c 0 -o fw_qpc.csv
-dwell.exe -n 1000000 -c 0 -i cpuid -o fw_dwell_c0.csv
-dwell.exe -n 1000000 -c 0 -i sgdt  -o fw_sgdt_c0.csv
-dwell.exe -n 1000000 -c 0 -i rdtscaux
-tlbperturb.exe -t cpuid -c 0
-tlbperturb.exe -t clock -c 0        # 时钟封堵路径 exit 的扰动(重点)
+Executable.exe clk -h -n 1000000 -c 0 -o fw_hpet.csv
+Executable.exe clk -p -n 1000000 -c 0 -o fw_pmtmr.csv
+Executable.exe clk -q -n 1000000 -c 0 -o fw_qpc.csv
+Executable.exe dwell -n 1000000 -c 0 -i cpuid -o fw_dwell_c0.csv
+Executable.exe dwell -n 1000000 -c 0 -i sgdt  -o fw_sgdt_c0.csv
+Executable.exe dwell -n 1000000 -c 0 -i rdtscaux
+Executable.exe tlb -t cpuid -c 0
+Executable.exe tlb -t clock -c 0        # 时钟封堵路径 exit 的扰动(重点)
 
 # ⚠ 真值交叉验证(必做): 卸载框架后查会话日志 'y' 事件数>0
 #   Gept: gept_log.txt;  Gnpt: gnpt_log.txt
@@ -86,42 +86,42 @@ python3 Elenchus\Script\analyze.py bare_hpet.csv vm_hpet.csv fw_hpet.csv
 
 ```powershell
 sc start elenchus     # 若已装载则跳过
-rxprobe.exe -c 0      # 逐核 0..N-1, 每核 3 轮
+Executable.exe rx -c 0      # 逐核 0..N-1, 每核 3 轮
 # 形态矩阵:
 #   Gnpt 普通模式(demo 冷靶) → 预期驻留核 FAIL(预注册输格)
 #   NtClose 挂 TRANSPARENT → 预期全核 PASS
 #   Gept HideRead=1 → PASS; HideRead=0 → 视核形态
-rxprobe.exe -c 0 -e 100
+Executable.exe rx -c 0 -e 100
 ```
 
 ### 阶段 3：性能基线（Intel 5 形态 / AMD 4 形态）
 
 ```powershell
 sc start elenchus
-bench.exe kaddr                      # KbTarget VA
+Executable.exe bench kaddr                      # KbTarget VA
 # 共同形态:
-#   裸机:   bench.exe k -n 1000000 ×3
-#   inline: bench.exe k -n 1000000 --inline ×3 (自动装/卸)
+#   裸机:   Executable.exe bench k -n 1000000 ×3
+#   inline: Executable.exe bench k -n 1000000 --inline ×3 (自动装/卸)
 #   框架×3: demo main.c 挂 KbTarget VA(shadow/TRANSPARENT/NX-FENCE 各一轮)
-#           → sc start 框架 → bench.exe k → sc stop
-#   端到端: demo 挂 NtClose → bench.exe hits/batch/flood/ctxsw
-# 仅 Intel: VMFUNC 式(HyperDbg EPT hook 同靶) → bench.exe k
+#           → sc start 框架 → Executable.exe bench k → sc stop
+#   端到端: demo 挂 NtClose → Executable.exe bench hits/batch/flood/ctxsw
+# 仅 Intel: VMFUNC 式(HyperDbg EPT hook 同靶) → Executable.exe bench k
 ```
 
 ### 阶段 4：B 族 + C3 全程窗口 + 长浸泡
 
 ```powershell
 sc start elenchus
-idprobe.exe -o bare      # 三形态: bare / vm / fw
+Executable.exe id -o bare      # 三形态: bare / vm / fw
 python3 Elenchus\Script\diff_cpuid.py bare_cpuid.csv fw_cpuid.csv
-dbgface.exe -n 100       # 三形态各跑
+Executable.exe dbg -n 100       # 三形态各跑
 # B4: 全核驻留会话中截图任务管理器"虚拟化: 已禁用"
 
 # C1 物理扫描: 单次/平台; 分析含 SLAT 签名 + 近重复页关联
 #   (采集器未随套件, 附录级, 需要再写)
 
 # C3 全程窗口(两终端):
-#   终端1: dwell.exe -w -i cpuid -o win_full.csv
+#   终端1: Executable.exe dwell -w -i cpuid -o win_full.csv
 #   终端2: sc start GeptHooks → 60s → sc stop GeptHooks
 #   终端1: Ctrl-C (install/uninstall 两窗口毛刺)
 ```
