@@ -68,7 +68,10 @@ int RunRx(int argc, char** argv)
 
     for (int i = 1; i < argc; i++)
     {
-        if (!strcmp(argv[i], "-t") && i + 1 < argc) target = strtoull(argv[++i], NULL, 0);
+        //base16: 兼容裸十六进制("FFFF80...")与0x前缀; base0会把无前缀
+        //十六进制判为十进制→返回0→静默回退自动解析NtClose(判例2026-10-28:
+        //整轮矩阵探测了未挂钩的NtClose=平凡PASS, 数据作废)
+        if (!strcmp(argv[i], "-t") && i + 1 < argc) target = strtoull(argv[++i], NULL, 16);
         else if (!strcmp(argv[i], "-l") && i + 1 < argc) len = (unsigned long)atoi(argv[++i]);
         else if (!strcmp(argv[i], "-e") && i + 1 < argc) execN = (unsigned long)atoi(argv[++i]);
         else if (!strcmp(argv[i], "-c") && i + 1 < argc) cpu = atoi(argv[++i]);

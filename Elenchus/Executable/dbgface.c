@@ -33,32 +33,55 @@ static void* MakeStubs(void)
     p[64] = 0xF1; p[65] = 0xC3;
     // TF:     9C                       pushfq
     //         81 4C 24 00 00 01 00 00  or dword ptr [rsp], 0x100
-    //         9D                       popfq
-    //         C3                       ret  (popfq 后本条即触发 TF 陷阱)
+    //         9D                       popfq   (TF 置位; #DB 抑制一条)
+    //         90 ×8                    nops    ← 着陆区: 陷阱落点必须在桩区内!
+    //                                  (POPF/TF 规则: 陷阱在 popfq 下一条指令
+    //                                   执行后触发 — 若下一条是 ret, 陷阱地址
+    //                                   落回调用者代码区, VEH 不认领=进程死)
+    //         C3                       ret
     p[128] = 0x9C;
     p[129] = 0x81; p[130] = 0x4C; p[131] = 0x24; p[132] = 0x00;
     p[133] = 0x00; p[134] = 0x01; p[135] = 0x00; p[136] = 0x00;
-    p[137] = 0x9D; p[138] = 0xC3;
+    p[137] = 0x9D;
+    for (int k = 0; k < 8; k++) p[138 + k] = 0x90;
+    p[146] = 0xC3;
     g_stubBase = p;
     return p;
 }
 
-// VEH: 单步类异常认领（地址落在桩区 = 我们的探针）
+// VEH: 落在桩区内的异常一律认领(计为投递), 并把 Rip 归一到各桩的续行点
+// (兼容软件中断地址约定的两种形态: 指令处 / 返回地址处)
 static LONG WINAPI VehHandler(PEXCEPTION_POINTERS ep)
 {
-    if (ep->ExceptionRecord->ExceptionCode == (DWORD)0x80000004 /*STATUS_SINGLE_STEP*/)
+    ULONG64 addr = (ULONG64)ep->ExceptionRecord->ExceptionAddress;
+    ULONG64 base = (ULONG64)g_stubBase;
+    if (addr >= base && addr < base + 4)              // int1 桩
     {
-        ULONG64 addr = (ULONG64)ep->ExceptionRecord->ExceptionAddress;
-        ULONG64 base = (ULONG64)g_stubBase;
-        if (addr >= base && addr < base + 256)
-        {
-            // TF 陷阱: 清 TF 后继续（陷阱已计为投递）
-            ep->ContextRecord->EFlags &= ~0x100;
-            InterlockedIncrement(&g_delivered);
-            return EXCEPTION_CONTINUE_EXECUTION;
-        }
+        ep->ContextRecord->Rip = base + 2;            // → ret
+        InterlockedIncrement(&g_delivered);
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+    if (addr >= base + 64 && addr < base + 68)        // ICEBP 桩
+    {
+        ep->ContextRecord->Rip = base + 65;           // → ret
+        InterlockedIncrement(&g_delivered);
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+    if (addr >= base + 128 && addr < base + 147)      // TF 桩(含着陆区)
+    {
+        ep->ContextRecord->EFlags &= ~0x100;          // 清 TF
+        ep->ContextRecord->Rip = base + 139;          // → 着陆区中段
+        InterlockedIncrement(&g_delivered);
+        return EXCEPTION_CONTINUE_EXECUTION;
     }
     return EXCEPTION_CONTINUE_SEARCH;
+}
+
+// SEH 过滤器: 兜底路径 — 异常未被 VEH 认领时清 TF 防残留单步死循环
+static int ClrTfFilter(PEXCEPTION_POINTERS ep)
+{
+    ep->ContextRecord->EFlags &= ~0x100;
+    return EXCEPTION_EXECUTE_HANDLER;
 }
 
 typedef void (*STUB_FN)(void);
@@ -89,30 +112,42 @@ int RunDbg(int argc, char** argv)
 
     printf("== 调试子系统保真探测 (每项 %d 次) ==\n\n", n);
 
-    // 1. int1
+    // 1. int1 (SEH 兜底: 未认领异常≠崩溃, 记为未投递)
     g_delivered = 0;
     STUB_FN fnInt1 = (STUB_FN)stubs;
-    for (int i = 0; i < n; i++) fnInt1();
+    __try
+    {
+        for (int i = 0; i < n; i++) fnInt1();
+    }
+    __except (ClrTfFilter(GetExceptionInformation())) { }
     printf("int1 软件陷阱:   %3d/%d  %s\n", g_delivered, n,
         g_delivered == n ? "PASS" : (g_delivered == 0 ? "FAIL(吞=指纹)" : "PARTIAL"));
 
     // 2. ICEBP
     g_delivered = 0;
     STUB_FN fnIcebp = (STUB_FN)(stubs + 64);
-    for (int i = 0; i < n; i++) fnIcebp();
+    __try
+    {
+        for (int i = 0; i < n; i++) fnIcebp();
+    }
+    __except (ClrTfFilter(GetExceptionInformation())) { }
     printf("ICEBP (0xF1):    %3d/%d  %s\n", g_delivered, n,
         g_delivered == n ? "PASS" : (g_delivered == 0 ? "FAIL(吞=经典指纹)" : "PARTIAL"));
 
     // 3. TF 单步
     g_delivered = 0;
     STUB_FN fnTf = (STUB_FN)(stubs + 128);
-    for (int i = 0; i < n; i++) fnTf();
+    __try
+    {
+        for (int i = 0; i < n; i++) fnTf();
+    }
+    __except (ClrTfFilter(GetExceptionInformation())) { }
     printf("TF 单步陷阱:     %3d/%d  %s\n", g_delivered, n,
         g_delivered == n ? "PASS" : (g_delivered == 0 ? "FAIL(单步被吞)" : "PARTIAL"));
 
     // 4. DR0/DR7 写读一致性（挂起-写-读回）
     printf("DR 写读一致性:   ");
-    static volatile LONG g_stop = 0;
+    volatile LONG g_stop = 0;
     HANDLE hReady = CreateEventA(NULL, FALSE, FALSE, NULL);
     WORKER_ARG wa = { hReady, &g_stop };
     HANDLE hThread = CreateThread(NULL, 0, DrWorker, &wa, 0, NULL);

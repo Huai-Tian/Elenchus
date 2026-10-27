@@ -14,6 +14,8 @@
 //
 // 各子命令参数与原独立程序完全一致(参数平移, 内部解析零改动)。
 // =====================================================================
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include <stdio.h>
 #include <string.h>
 #include "probes.h"
@@ -26,6 +28,8 @@ static void Help(void)
         "\n"
         "用法: Executable.exe <子命令> [参数...]\n"
         "\n"
+        "  (无参数)                             全自动采集(形态自判定)\n"
+        "  auto [fw|vm|bare]                    全自动 + 强制形态(隐蔽框架侧推荐)\n"
         "  cpuid  [-o out.csv]                 CPUID 全叶 dump(含越界/管理程序 leaf) [B1]\n"
         "  dwell  -i cpuid|sgdt|rdtscaux [...] RDTSC 夹逼驻留 / TSC_AUX / 安装窗口 [A1/C3]\n"
         "        -n N -c CPU -o FILE -w(窗口模式)\n"
@@ -43,13 +47,22 @@ static void Help(void)
 
 int main(int argc, char** argv)
 {
-    // ── 全自动模式: 无参数直接回车 ──
+    // 控制台切 UTF-8 输出(源码字符串是 UTF-8, 否则 GBK 控制台显示乱码)
+    SetConsoleOutputCP(65001);
+
+    // ── 全自动模式: 无参数直接回车; 或 "auto [fw|vm|bare]" 强制形态 ──
     // 检测环境(bare/vm/fw) → 按形态跑完整清单 → 自动命名/轮次/汇总
+    // (隐蔽框架不置 hypervisor 位时自动判定靠 CPUID 成本快测;
+    //  仍误判则显式: Executable.exe auto fw)
     if (argc < 2)
     {
-        return RunAuto();
+        return RunAuto(NULL);
     }
     const char* sub = argv[1];
+    if (!strcmp(sub, "auto"))
+    {
+        return RunAuto(argc >= 3 ? argv[2] : NULL);
+    }
     if (!strcmp(sub, "cpuid"))       return RunCpuidDump(argc - 1, argv + 1);
     if (!strcmp(sub, "dwell"))       return RunDwell(argc - 1, argv + 1);
     if (!strcmp(sub, "clk"))         return RunClk(argc - 1, argv + 1);

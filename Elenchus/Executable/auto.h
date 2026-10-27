@@ -3,4 +3,5 @@
 // =====================================================================
 #pragma once
 
-int RunAuto(void);
+// forcedForm: NULL=自动判定; "fw"/"vm"/"bare"=强制指定形态
+int RunAuto(const char* forcedForm);

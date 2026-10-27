@@ -224,11 +224,19 @@ NTSTATUS RxdiffDispatch(ULONG Code, PIRP Irp, PIO_STACK_LOCATION Io, ULONG* OutL
         }
 
         // 执行: 触发拦截(若被双视图 hook, 本核自此驻留 hooked 视图)
+        // ExecCount==0 = 纯读差分模式(判别实验: 隔离"执行"变量)
         {
-            NTSTATUS(NTAPI * pNtClose)(HANDLE) = (PVOID)target;
-            for (ULONG k = 0; k < (in->ExecCount ? in->ExecCount : 1); k++)
+            if (in->ExecCount != 0)
             {
-                out->ExecStatus = pNtClose((HANDLE)-1);    // 无副作用安全调用
+                NTSTATUS (NTAPI *pNtClose)(HANDLE) = (PVOID)target;
+                for (ULONG k = 0; k < in->ExecCount; k++)
+                {
+                    out->ExecStatus = pNtClose((HANDLE)-1);    // 无副作用安全调用
+                }
+            }
+            else
+            {
+                out->ExecStatus = STATUS_SUCCESS;    // 纯读模式标记
             }
         }
 

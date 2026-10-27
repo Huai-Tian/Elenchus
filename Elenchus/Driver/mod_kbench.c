@@ -16,7 +16,7 @@
 // ExAllocatePoolWithTag 弃用警告静音(兼容 2004 以前的 Win10)
 #pragma warning(disable : 4996)
 
-typedef ULONG64(*KB_FN)(ULONG64, ULONG64, ULONG64, ULONG64);
+typedef ULONG64 (*KB_FN)(ULONG64, ULONG64, ULONG64, ULONG64);
 
 extern ULONG64 KbTarget(ULONG64, ULONG64, ULONG64, ULONG64);
 extern ULONG64 KbDetour(ULONG64, ULONG64, ULONG64, ULONG64);
@@ -24,7 +24,7 @@ extern ULONG64 KbDetour(ULONG64, ULONG64, ULONG64, ULONG64);
 // trampoline 函数指针(KbDetour 经 [KbTrampFn] 尾跳)
 KB_FN KbTrampFn = NULL;
 
-typedef struct _KB_RUN_IN { ULONG64 Iterations; } KB_RUN_IN;
+typedef struct _KB_RUN_IN  { ULONG64 Iterations; } KB_RUN_IN;
 typedef struct _KB_RUN_OUT { ULONG64 CyclesPerCall; ULONG64 Checksum; ULONG64 TargetVa; } KB_RUN_OUT;
 
 static UCHAR* g_trampoline = NULL;   // NonPaged 池: 12B前缀+12B跳回

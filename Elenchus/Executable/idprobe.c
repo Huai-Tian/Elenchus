@@ -139,6 +139,11 @@ int RunId(int argc, char** argv)
 
     printf("\n[MSR 面] (三形态对照: 同表裸机/VMware/框架各跑一次)\n");
     printf("%-12s %-14s %-18s %s\n", "MSR", "结果", "值", "异常");
+    // MSR/指令面结果同步落 CSV(论文表格数据源; 控制台输出保留)
+    char mpath[512];
+    snprintf(mpath, sizeof(mpath), "%s_msr.csv", prefix);
+    FILE* fm = fopen(mpath, "w");
+    if (fm) fprintf(fm, "kind,item,value,exc_code\n");
     DWORD br;
     for (int i = 0; i < (int)nMsrs; i++)
     {
@@ -149,10 +154,13 @@ int RunId(int argc, char** argv)
             printf("0x%-10X %-14s 0x%016llX %s(0x%lX)\n",
                 msrs[i], out.Code == 0 ? "READ" : "EXC", out.Value,
                 ExcName(out.Code), out.Code);
+            if (fm) fprintf(fm, "msr,0x%X,0x%016llX,0x%lX\n",
+                msrs[i], (unsigned long long)out.Value, (unsigned long)out.Code);
         }
         else
         {
             printf("0x%-10X IOCTL失败 %lu\n", msrs[i], GetLastError());
+            if (fm) fprintf(fm, "msr,0x%X,IOCTL_FAIL,%lu\n", msrs[i], GetLastError());
         }
     }
 
@@ -166,12 +174,15 @@ int RunId(int argc, char** argv)
         if (DeviceIoControl(h, ELEN_IOCTL_IDFACE_INSTR, &in, sizeof(in), &out, sizeof(out), &br, NULL))
         {
             printf("%-8s %s(0x%lX)\n", names[w], ExcName(out.Code), out.Code);
+            if (fm) fprintf(fm, "instr,%s,,0x%lX\n", names[w], (unsigned long)out.Code);
         }
         else
         {
             printf("%-8s IOCTL失败 %lu\n", names[w], GetLastError());
+            if (fm) fprintf(fm, "instr,%s,IOCTL_FAIL,%lu\n", names[w], GetLastError());
         }
     }
+    if (fm) { fclose(fm); printf("[MSR/INSTR] 已写入 %s\n", mpath); }
     CloseHandle(h);
     printf("\n判读(对照本机裸机同名输出, 架构语义基准):\n");
     printf("  VMXOFF/VMREAD: SDM Vol.3C—VMX operation 之外执行恒 #UD;\n");

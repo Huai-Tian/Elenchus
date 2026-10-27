@@ -147,6 +147,12 @@ int RunBench(int argc, char** argv)
         LARGE_INTEGER f, t0, t1;
         QueryPerformanceFrequency(&f);
         SetThreadPriority(th, THREAD_PRIORITY_TIME_CRITICAL);
+        //钉核修复(判例2026-10-28): 原实现两线程均未钉核——主线程钉
+        //cpu0而工作线程调度器自由, 同核双TIME_CRITICAL乒乓可退化为
+        //活锁(bare/fw双侧一致卡死实测)。工作线程钉异核=强制真跨核
+        //切换, 语义与"上下文切换成本"的测量目标一致(若两线程同核,
+        //测量的是线程量子轮转而非上下文切换)
+        SetThreadAffinityMask(th, (DWORD_PTR)1 << 1);
         Sleep(50);                                  // B 就绪
         QueryPerformanceCounter(&t0);
         for (long long i = 0; i < n; i++)
