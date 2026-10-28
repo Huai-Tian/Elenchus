@@ -160,3 +160,38 @@ Executable.exe dbg -n 100       # 三形态各跑
 - AMD 长浸泡守冷启窗口纪律；死亡后不立即重启复测
 - 正对照 VMware 每台机器跑自己的（同平台约束）
 - 异常输出 = 真实数据（如 STGI 在现代 AMD 裸机合法执行非 #UD）——如实记录
+
+## S3 归因否认 ROC 实验(detect 子命令, 2026-10-28 增)
+
+**目的**: 论文 §3.6 的实证臂——在场检测者仿真。检测者只能测量本机、无裸机
+真值参照; 本实验把"不可归因"从论证变成 AUC 数字。
+
+**探针电池**(纯 R3, 无驱动无签名无管理员——朋友机器可直接采样):
+P1 hvbit / P2 hvleaf / P3 CPUID dwell / P4 RDTSC dwell / P5 成本比 /
+P6 SGDT dwell / P7 跨核 TSC 同步(单调令牌屏障) / P8 QPC-TSC 相干残差 /
+P9 TSC 频率双窗口。
+
+**采集**(每机器 ~2 分钟, 一形态一行):
+
+```powershell
+Executable.exe detect -t 机器标签 -f bare|fw|vm|wsl -o obs.csv   # 追加
+Executable.exe detect                                              # 只打印报告
+```
+
+**协议**: bare(H₀) 目标 N≥10 台异构(Intel/AMD×代际, 顺手收 Win11);
+fw×5 轮(9600X, S2 同配置); vm×3(检测器有效性验证: 其 AUC 应显著高于 fw);
+benign-virt(WSL2/Hyper-V/VBox)×3 = 检测者误报面。
+
+**分析**:
+
+```powershell
+python Elenchus/Script/roc.py obs.csv --pos fw --neg bare [--plot roc.png]
+```
+
+逐特征全阈值 ROC + 组合得分(校准集 min-max 归一)+ Hanley-McNeil 95%CI +
+Youden J 混淆矩阵; vm 形态自动作检测器有效性验证列。
+
+**预测注册**(S3 设计文档, 先于数据): fw AUC≈0.5, vm AUC>0.9。
+
+**注意**: P7 用 -c 指定核对(默认 0/1, 主线程让位核 2); 单核机器记无效值
+0xFFFFFFFFFFFFFFFF(分析自动剔除)。dwell 采样 -n 默认 20 万(~10s)。

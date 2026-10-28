@@ -40,6 +40,8 @@ static void Help(void)
         "  id     [-o 前缀] [-m MSR列表]       CPUID+MSR+指令面 [B1/B2]\n"
         "  dbg    [-n 次数]                    调试子系统保真 int1/ICEBP/TF/DR [B3]\n"
         "  bench  hits|batch|flood|ctxsw|k|kaddr  性能基准 [PERF]\n"
+        "  detect [-t 标签 -f 形态 -o obs.csv]  S3 在场检测者仿真(纯R3, ROC 特征采集)\n"
+        "        -n N -c CPU\n"
         "\n"
         "驱动依赖(rx/id/bench/clk -h/tlb -t clock 需先: sc start elenchus)\n"
         "完整协议: Script/PROTOCOL.md\n");
@@ -71,6 +73,7 @@ int main(int argc, char** argv)
     if (!strcmp(sub, "id"))          return RunId(argc - 1, argv + 1);
     if (!strcmp(sub, "dbg"))         return RunDbg(argc - 1, argv + 1);
     if (!strcmp(sub, "bench"))       return RunBench(argc - 1, argv + 1);
+    if (!strcmp(sub, "detect"))      return RunDetect(argc - 1, argv + 1);
     if (!strcmp(sub, "help") || !strcmp(sub, "-h") || !strcmp(sub, "/?"))
     {
         Help();

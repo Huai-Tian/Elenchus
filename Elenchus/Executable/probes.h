@@ -14,3 +14,4 @@ int RunRx(int argc, char** argv);          // elenchus rx     : C2 读-执行差
 int RunId(int argc, char** argv);          // elenchus id     : B1/B2 CPUID+MSR+指令面
 int RunDbg(int argc, char** argv);         // elenchus dbg    : B3 调试保真
 int RunBench(int argc, char** argv);       // elenchus bench  : PERF hits/batch/flood/ctxsw/k
+int RunDetect(int argc, char** argv);      // elenchus detect : S3 ROC 在场检测者仿真(纯R3)

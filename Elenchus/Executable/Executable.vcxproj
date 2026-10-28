@@ -81,6 +81,7 @@
     <ClCompile Include="idprobe.c" />
     <ClCompile Include="dbgface.c" />
     <ClCompile Include="bench.c" />
+    <ClCompile Include="detect.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="probes.h" />
